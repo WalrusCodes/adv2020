@@ -5,3 +5,7 @@ authors = ["WalrusWalrus <walruscodes@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
+
+[[bin]]
+name = "day1"
+path = "src/day1.rs"
