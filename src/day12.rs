@@ -13,11 +13,11 @@ struct Cmd {
 #[derive(Debug)]
 struct State {
     // +x is east
-    x: i32,
     // +y is north
-    y: i32,
-    // Degrees clockwise from north.
-    dir: i32,
+    ship_x: i32,
+    ship_y: i32,
+    wp_x: i32,
+    wp_y: i32,
 }
 
 impl Cmd {
@@ -34,9 +34,10 @@ impl Cmd {
 impl State {
     fn new() -> State {
         State {
-            x: 0,
-            y: 0,
-            dir: 90,
+            ship_x: 0,
+            ship_y: 0,
+            wp_x: 10,
+            wp_y: 1,
         }
     }
 
@@ -59,20 +60,43 @@ impl State {
             'E' => (1, 0),
             'W' => (-1, 0),
             'L' => {
-                self.dir = (self.dir - cmd.arg as i32).rem_euclid(360);
+                // wp_x: 10, wp_y: 1
+                //
+                //     X    (-1, 10)
+                //      .
+                //      .
+                //      .
+                //      .              X   (10, 1)
+                //    [ship] ..........
+                assert_eq!(cmd.arg % 90, 0);
+                for _ in 0..(cmd.arg / 90) {
+                    let tmp = self.wp_x;
+                    self.wp_x = -self.wp_y;
+                    self.wp_y = tmp;
+                }
                 (0, 0)
-            }
+            },
             'R' => {
-                self.dir = (self.dir + cmd.arg as i32).rem_euclid(360);
+                assert_eq!(cmd.arg % 90, 0);
+                for _ in 0..(cmd.arg / 90) {
+                    let tmp = self.wp_x;
+                    self.wp_x = self.wp_y;
+                    self.wp_y = -tmp;
+                }
                 (0, 0)
-            }
-            'F' => State::angle_to_d(self.dir),
+            },
+            'F' => (self.wp_x, self.wp_y),
             _ => {
                 panic!("eek");
             }
         };
-        self.x += dx * cmd.arg as i32;
-        self.y += dy * cmd.arg as i32;
+        if cmd.cmd == 'F' {
+            self.ship_x += dx * cmd.arg as i32;
+            self.ship_y += dy * cmd.arg as i32;
+        } else {
+            self.wp_x += dx * cmd.arg as i32;
+            self.wp_y += dy * cmd.arg as i32;
+        }
     }
 }
 
@@ -87,7 +111,7 @@ fn run(cmds: &Vec<Cmd>) -> i32 {
         state.apply(cmd);
     }
     dbg!(&state);
-    state.x.abs() + state.y.abs()
+    state.ship_x.abs() + state.ship_y.abs()
 }
 
 fn main() {
