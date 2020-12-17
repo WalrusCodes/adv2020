@@ -70,8 +70,54 @@ fn part1(program: &Program) -> u64 {
     state.memory.values().sum()
 }
 
+fn calculate_addresses(address: u64, mask: &str, idx: usize, result: &mut Vec<u64>) {
+    if idx >= mask.len() {
+        result.push(address);
+        return;
+    }
+    let c = mask.chars().rev().nth(idx).unwrap();
+    match c {
+        '0' => {
+            calculate_addresses(address, mask, idx + 1, result);
+        }
+        '1' => {
+            calculate_addresses(address | (1 << idx), mask, idx + 1, result);
+        }
+        'X' => {
+            calculate_addresses(address | (1 << idx), mask, idx + 1, result);
+            calculate_addresses(address & !(1 << idx), mask, idx + 1, result);
+        }
+        _ => {
+            panic!("bad char: {}", c);
+        }
+    };
+}
+
+fn part2(program: &Program) -> u64 {
+    let mut state = State::default();
+    for cmd in program.iter() {
+        match cmd {
+            Cmd::SetMask(mask) => {
+                state.mask = mask;
+            }
+            &Cmd::Write(address, value) => {
+                // 1) calculate all addresses by applying state.mask to address
+                let mut floating_addresses = Vec::new();
+                calculate_addresses(address, state.mask, 0, &mut floating_addresses);
+                // 2) write to them
+                for &a in floating_addresses.iter() {
+                    // println!("writing {} to {}", value, a);
+                    state.memory.insert(a, value);
+                }
+            }
+        }
+    }
+    state.memory.values().sum()
+}
+
 fn main() {
     let contents = std::fs::read_to_string("input/14.txt").expect("read failed");
     let program = dbg!(parse_input(&contents));
-    dbg!(part1(&program));
+    // dbg!(part1(&program));
+    dbg!(part2(&program));
 }
