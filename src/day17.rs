@@ -5,6 +5,7 @@ struct Point {
     x: i32,
     y: i32,
     z: i32,
+    w: i32,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -14,23 +15,26 @@ struct State {
 }
 
 impl Point {
-    fn new(x: i32, y: i32, z: i32) -> Point {
-        Point { x, y, z }
+    fn new(x: i32, y: i32, z: i32, w: i32) -> Point {
+        Point { x, y, z, w }
     }
 
-    fn neighbors(self: &Self) -> [Point; 26] {
-        let mut out = [Point::default(); 26];
+    fn neighbors(self: &Self) -> [Point; 80] {
+        let mut out = [Point::default(); 80];
         let mut idx = 0;
         for x in -1..=1 {
             for y in -1..=1 {
                 for z in -1..=1 {
-                    if x == 0 && y == 0 && z == 0 {
-                        continue;
+                    for w in -1..=1 {
+                        if x == 0 && y == 0 && z == 0 && w == 0 {
+                            continue;
+                        }
+                        out[idx].x = self.x + x;
+                        out[idx].y = self.y + y;
+                        out[idx].z = self.z + z;
+                        out[idx].w = self.w + w;
+                        idx += 1;
                     }
-                    out[idx].x = self.x + x;
-                    out[idx].y = self.y + y;
-                    out[idx].z = self.z + z;
-                    idx += 1;
                 }
             }
         }
@@ -44,7 +48,7 @@ impl State {
         for (y, line) in input.lines().enumerate() {
             for (x, ch) in line.chars().enumerate() {
                 if ch == '#' {
-                    points.insert(Point::new(x as i32, y as i32, 0));
+                    points.insert(Point::new(x as i32, y as i32, 0, 0));
                 }
             }
         }
@@ -91,7 +95,7 @@ impl State {
     }
 }
 
-fn part1(state: &State) -> u32 {
+fn run(state: &State) -> u32 {
     let mut state = state.clone();
     for _ in 0..6 {
         state = state.step();
@@ -102,5 +106,5 @@ fn part1(state: &State) -> u32 {
 fn main() {
     let contents = std::fs::read_to_string("input/17.txt").expect("read failed");
     let state = State::parse(&contents);
-    dbg!(part1(&state));
+    dbg!(run(&state));
 }
