@@ -6,7 +6,7 @@ enum Operation {
     Multiply,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Token {
     Number(u64),
     Op(Operation),
@@ -106,7 +106,46 @@ fn evaluate(expr: &[Token]) -> u64 {
     assert_eq!(state.stack.len(), 1);
     assert!(state.stack[0].1.is_none());
     let result = state.stack[0].0;
-    dbg!(result)
+    // dbg!(result);
+    result
+}
+
+fn insert_close_paren(expr: &mut Vec<Token>, start_idx: usize) {
+    let mut level_count = 1;
+    let mut idx = start_idx;
+    while level_count > 0 && idx < expr.len() {
+        match expr[idx] {
+            Token::OpenParen => {
+                level_count += 1;
+            }
+            Token::CloseParen => {
+                level_count -= 1;
+            }
+            _ => {}
+        }
+        idx += 1;
+    }
+    expr.insert(idx, Token::CloseParen);
+}
+
+// Inserts parentheses after every multiplication operation to make it lower priority than
+// addition.
+// 
+// from: 1 * 2 + (3 *  4)  + 5
+//   to: 1 *(2 + (3 * (4)) + 5)
+fn make_multiplication_lower_priority(expr: &[Token]) -> Vec<Token> {
+    let mut out = expr.to_vec();
+    let mut idx = 0;
+    while idx < out.len() {
+        if let Token::Op(Operation::Multiply) = out[idx] {
+            // Insert opening paren.
+            out.insert(idx + 1, Token::OpenParen);
+            // Find the right place for closing paren and insert it.
+            insert_close_paren(&mut out, idx + 2);
+        }
+        idx += 1;
+    }
+    out
 }
 
 fn main() {
@@ -114,6 +153,15 @@ fn main() {
     let exprs = parse_file(&contents);
     // dbg!(&exprs[0]);
     // let result = evaluate(&exprs[0]);
+
+    // part 1:
     let result: u64 = exprs.iter().map(|x| evaluate(x)).sum();
+    dbg!(&result);
+
+    // part 2:
+    let result: u64 = exprs
+        .iter()
+        .map(|x| evaluate(&make_multiplication_lower_priority(x)))
+        .sum();
     dbg!(&result);
 }
