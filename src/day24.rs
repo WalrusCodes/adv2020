@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 enum Dir {
@@ -101,6 +101,10 @@ fn parse_and_resolve(input: &str) -> Tile {
     //   * going west => col -= 1
     //   * going east => col stays the same
     //   * if we were on an odd row, col += 1
+    //
+    // Neighbors:
+    // * if even row: [(0, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0)]
+    // * if odd row: [(0, 1), (1, 1), (1, 0), (0, -1), (-1, 0), (-1, 1)]
 
     for dir in TileParser::from(input) {
         match dir {
@@ -148,9 +152,12 @@ mod tests {
     }
 }
 
-// Takes a list of tiles, returns number that are black in the end.
-fn part1(tiles: &[Tile]) -> usize {
-    let mut black_tiles = HashSet::<Tile>::new();
+// Set of black tiles.
+type State = HashSet<Tile>;
+
+// Takes a list of tiles, returns tiles that are black.
+fn part1(tiles: &[Tile]) -> State {
+    let mut black_tiles = State::new();
     for tile in tiles.iter() {
         if black_tiles.contains(tile) {
             black_tiles.remove(tile);
@@ -158,7 +165,58 @@ fn part1(tiles: &[Tile]) -> usize {
             black_tiles.insert(tile.clone());
         }
     }
-    black_tiles.len()
+    black_tiles
+}
+
+impl Tile {
+    fn neighbors(&self) -> [(i32, i32); 6] {
+        if (self.row % 2) == 0 {
+            [(0, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0)]
+        } else {
+            [(0, 1), (1, 1), (1, 0), (0, -1), (-1, 0), (-1, 1)]
+        }
+    }
+}
+
+// Performs tile flips for one day in part 2.
+fn do_step(state: &State) -> State {
+    let mut neighbor_count: HashMap<Tile, usize> = HashMap::new();
+    for tile in state {
+        for (offset_row, offset_col) in tile.neighbors().iter() {
+            let nt = Tile {
+                row: tile.row + offset_row,
+                col: tile.col + offset_col,
+            };
+            *neighbor_count.entry(nt).or_insert(0) += 1;
+        }
+    }
+    // dbg!(&neighbor_count);
+
+    let mut new_state = State::new();
+    for (tile, count) in neighbor_count.into_iter() {
+        // Rules:
+        // * black tile && (0 or 3+ neighbors) => white
+        // * white tile && 2 neighbors => black
+        //
+        // 0 => white
+        // 1 && black => black
+        // 2 => black
+        // 3 => white
+        if (count == 2) || ((count == 1) && state.contains(&tile)) {
+            new_state.insert(tile);
+        }
+    }
+
+    new_state
+}
+
+fn part2(state: &State, days: usize) -> usize {
+    let mut s = state.clone();
+    for i in 1..=days {
+        s = do_step(&s);
+        // dbg!(i, s.len());
+    }
+    s.len()
 }
 
 fn main() {
@@ -167,6 +225,7 @@ fn main() {
         .lines()
         .map(parse_and_resolve)
         .collect::<Vec<Tile>>();
-    // dbg!(&tiles);
-    println!("black tiles: {}", part1(&tiles));
+    let black_tiles = part1(&tiles);
+    println!("black tiles for part 1: {}", black_tiles.len());
+    println!("black tiles for part 2: {}", part2(&black_tiles, 100));
 }
